@@ -128,5 +128,6 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *WebServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&serversv1beta1.WebServer{}).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
