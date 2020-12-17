@@ -46,6 +46,8 @@ type WebServerReconciler struct {
 
 // +kubebuilder:rbac:groups=servers.amsy810.dev,resources=webservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=servers.amsy810.dev,resources=webservers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 
 func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
