@@ -25,12 +25,18 @@ import (
 
 // WebServerSpec defines the desired state of WebServer
 type WebServerSpec struct {
-	Replicas int32         `json:"replicas,omitempty"`
-	Content  string        `json:"content,omitempty"`
-	Port     WebServerPort `json:"port,omitempty"`
+	// +kubebuilder:validation:Maximum=5
+	Replicas int32 `json:"replicas,omitempty"`
+
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:MinLength=8
+	Content string `json:"content,omitempty"`
+
+	Port WebServerPort `json:"port,omitempty"`
 }
 
 type WebServerPort struct {
+	// FROM CRD v1, we can use defaulting +kubebuilder:default:=80
 	HTTP int32 `json:"http,omitempty"`
 }
 

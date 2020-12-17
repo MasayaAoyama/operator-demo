@@ -35,15 +35,19 @@ spec:
           description: WebServerSpec defines the desired state of WebServer
           properties:
             content:
+              maxLength: 1024
+              minLength: 8
               type: string
             port:
               properties:
                 http:
+                  description: FROM CRD v1, we can use defaulting +kubebuilder:default:=80
                   format: int32
                   type: integer
               type: object
             replicas:
               format: int32
+              maximum: 5
               type: integer
           type: object
         status:
