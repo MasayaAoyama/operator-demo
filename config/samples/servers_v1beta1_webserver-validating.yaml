@@ -1,0 +1,9 @@
+apiVersion: servers.amsy810.dev/v1beta1
+kind: WebServer
+metadata:
+  name: webserver-sample-validating
+spec:
+  replicas: 1
+  content: "Hello, world!"
+  port:
+    http: 80
