@@ -1,3 +1,7 @@
 domain: amsy810.dev
 repo: github.com/MasayaAoyama/operator-demo
+resources:
+- group: servers
+  kind: WebServer
+  version: v1beta1
 version: "2"
