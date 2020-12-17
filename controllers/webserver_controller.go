@@ -54,6 +54,7 @@ type WebServerReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=service,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=service/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
