@@ -1,0 +1,7 @@
+apiVersion: servers.amsy810.dev/v1beta1
+kind: WebServer
+metadata:
+  name: webserver-sample-defaulting
+spec:
+  port:
+    http: 80
