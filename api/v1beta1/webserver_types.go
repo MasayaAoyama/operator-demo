@@ -47,6 +47,9 @@ type WebServerStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.spec.replicas`
+// +kubebuilder:printcolumn:name="Port",type=integer,JSONPath=`.spec.port.http`
+// +kubebuilder:printcolumn:name="Content",type=string,JSONPath=`.spec.content`
 
 // WebServer is the Schema for the webservers API
 type WebServer struct {

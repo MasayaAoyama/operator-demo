@@ -8,6 +8,16 @@ metadata:
   creationTimestamp: null
   name: webservers.servers.amsy810.dev
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.replicas
+    name: Replicas
+    type: integer
+  - JSONPath: .spec.port.http
+    name: Port
+    type: integer
+  - JSONPath: .spec.content
+    name: Content
+    type: string
   group: servers.amsy810.dev
   names:
     kind: WebServer
@@ -15,6 +25,7 @@ spec:
     plural: webservers
     singular: webserver
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: WebServer is the Schema for the webservers API
