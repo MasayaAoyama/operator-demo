@@ -113,6 +113,7 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// If child Deployment object is not found, "create" child Deployment object
 	if err != nil && errors.IsNotFound(err) {
+		r.Recorder.Eventf(instance, corev1.EventTypeNormal, "Created", "Creating Deployment %s/%s", deploy.Namespace, deploy.Name)
 		log.Info("Creating Deployment", "namespace", deploy.Namespace, "name", deploy.Name)
 		err = r.Create(context.TODO(), deploy)
 		return ctrl.Result{}, err
@@ -123,6 +124,7 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// If child Deployment object is exist and Deployment spec has difference, create "update" Deployment object
 	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
 		found.Spec = deploy.Spec
+		r.Recorder.Eventf(instance, corev1.EventTypeNormal, "Updated", "Updating Deployment %s/%s", deploy.Namespace, deploy.Name)
 		log.Info("Updating Deployment", "namespace", deploy.Namespace, "name", deploy.Name)
 		err = r.Update(context.TODO(), found)
 		if err != nil {
@@ -166,6 +168,7 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// If child Service object is not found, "create" child Service object
 	if err != nil && errors.IsNotFound(err) {
+		r.Recorder.Eventf(instance, corev1.EventTypeNormal, "Created", "Creating Service %s/%s", service.Namespace, service.Name)
 		log.Info("Creating Service", "namespace", service.Namespace, "name", service.Name)
 		err = r.Create(context.TODO(), service)
 		return reconcile.Result{}, err
@@ -177,6 +180,7 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// TODO need more check
 	if !reflect.DeepEqual(service.Spec.Ports[0].Port, foundSvc.Spec.Ports[0].Port) {
 		foundSvc.Spec.Ports = service.Spec.Ports
+		r.Recorder.Eventf(instance, corev1.EventTypeNormal, "Updated", "Updating Service %s/%s", service.Namespace, service.Name)
 		log.Info("Updating Service", "namespace", service.Namespace, "name", service.Name)
 		err = r.Update(context.TODO(), foundSvc)
 		if err != nil {
