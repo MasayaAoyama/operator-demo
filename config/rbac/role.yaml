@@ -27,6 +27,26 @@ rules:
   - patch
   - update
 - apiGroups:
+  - ""
+  resources:
+  - service
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - service/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - servers.amsy810.dev
   resources:
   - webservers
