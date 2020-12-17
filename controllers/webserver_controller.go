@@ -18,13 +18,23 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	serversv1beta1 "github.com/MasayaAoyama/operator-demo/api/v1beta1"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // WebServerReconciler reconciles a WebServer object
@@ -38,11 +48,78 @@ type WebServerReconciler struct {
 // +kubebuilder:rbac:groups=servers.amsy810.dev,resources=webservers/status,verbs=get;update;patch
 
 func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("webserver", req.NamespacedName)
+	ctx := context.Background()
+	log := r.Log.WithValues("webserver", req.NamespacedName)
 
-	// your logic here
+	// Get WebServer object
+	instance := &serversv1beta1.WebServer{}
+	err := r.Get(ctx, req.NamespacedName, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
 
+	// Create Deployment spec as child object
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Name + "-deployment",
+			Namespace: instance.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &instance.Spec.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"deployment": instance.Name + "-deployment"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"deployment": instance.Name + "-deployment"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "nginx",
+							Command: []string{
+								"/bin/sh",
+								"-c",
+								fmt.Sprintf("echo %s > /usr/share/nginx/html/index.html; nginx -g 'daemon off;'", instance.Spec.Content),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Relate parent and child object
+	if err := controllerutil.SetControllerReference(instance, deploy, r.Scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Get child Deployment object
+	found := &appsv1.Deployment{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, found)
+
+	// If child Deployment object is not found, "create" child Deployment object
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Creating Deployment", "namespace", deploy.Namespace, "name", deploy.Name)
+		err = r.Create(context.TODO(), deploy)
+		return ctrl.Result{}, err
+	} else if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// If child Deployment object is exist and Deployment spec has difference, create "update" Deployment object
+	if !reflect.DeepEqual(deploy.Spec, found.Spec) {
+		found.Spec = deploy.Spec
+		log.Info("Updating Deployment", "namespace", deploy.Namespace, "name", deploy.Name)
+		err = r.Update(context.TODO(), found)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Reconcile successfully
 	return ctrl.Result{}, nil
 }
 
