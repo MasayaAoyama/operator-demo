@@ -1,2 +1,4 @@
 resources:
 - manager.yaml
+patches:
+- patches.yaml
