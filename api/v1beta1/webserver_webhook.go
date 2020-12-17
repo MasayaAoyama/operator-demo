@@ -24,6 +24,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // log is for logging in this package.
@@ -59,8 +63,22 @@ var _ webhook.Validator = &WebServer{}
 func (r *WebServer) ValidateCreate() error {
 	webserverlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil
+	var allErrs field.ErrorList
+
+	if r.Spec.Replicas == 0 {
+		err := field.Invalid(
+			field.NewPath("spec").Child("schedule"),
+			r.Spec.Replicas,
+			"replicas must be >0")
+		allErrs = append(allErrs, err)
+	}
+	if len(allErrs) == 0 {
+		return nil
+	}
+
+	return errors.NewInvalid(
+		schema.GroupKind{Group: "servers.amsy.dev", Kind: "WebServer"},
+		r.Name, allErrs)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
