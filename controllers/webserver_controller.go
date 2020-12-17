@@ -35,6 +35,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // WebServerReconciler reconciles a WebServer object
@@ -48,6 +50,8 @@ type WebServerReconciler struct {
 // +kubebuilder:rbac:groups=servers.amsy810.dev,resources=webservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=service,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=service/status,verbs=get;update;patch
 
 func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -63,6 +67,9 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	// ===========================================================================================
+	// Deployment
+	// ===========================================================================================
 	// Create Deployment spec as child object
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -121,6 +128,60 @@ func (r *WebServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
+	// ===========================================================================================
+	// Service
+	// ===========================================================================================
+	// Create Service spec as child object
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.Name + "-service",
+			Namespace: instance.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				corev1.ServicePort{
+					Name:       "http-port",
+					Port:       instance.Spec.Port.HTTP,
+					TargetPort: intstr.FromInt(80),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+			Selector: map[string]string{
+				"deployment": instance.Name + "-deployment",
+			},
+			Type: corev1.ServiceTypeLoadBalancer,
+		},
+	}
+
+	// Relate parent and child object
+	if err := controllerutil.SetControllerReference(instance, service, r.Scheme); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Get child Service object
+	foundSvc := &corev1.Service{}
+	err = r.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, foundSvc)
+
+	// If child Service object is not found, "create" child Service object
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Creating Service", "namespace", service.Namespace, "name", service.Name)
+		err = r.Create(context.TODO(), service)
+		return reconcile.Result{}, err
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// If child Service object is exist and Service spec has difference, create "update" Service object
+	// TODO need more check
+	if !reflect.DeepEqual(service.Spec.Ports[0].Port, foundSvc.Spec.Ports[0].Port) {
+		foundSvc.Spec.Ports = service.Spec.Ports
+		log.Info("Updating Service", "namespace", service.Namespace, "name", service.Name)
+		err = r.Update(context.TODO(), foundSvc)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	// Reconcile successfully
 	return ctrl.Result{}, nil
 }
@@ -129,5 +190,6 @@ func (r *WebServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&serversv1beta1.WebServer{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
 		Complete(r)
 }
